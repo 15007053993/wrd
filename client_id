@@ -1,0 +1,155 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
+public class StickFightGame extends JFrame {
+    // 游戏面板
+    private GamePanel panel;
+    public StickFightGame() {
+        setTitle("火柴人逆袭");
+        setSize(800, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setResizable(false);
+        panel = new GamePanel();
+        add(panel);
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                panel.keyDown(e.getKeyCode());
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+                panel.keyUp(e.getKeyCode());
+            }
+        });
+    }
+
+    class GamePanel extends JPanel implements Runnable{
+        private Thread gameThread;
+        private boolean running;
+        //玩家火柴人
+        int px = 100, py = 250;
+        int vx=0, vy=0;
+        final int GRAVITY = 1;
+        boolean jump = false;
+        boolean attack = false;
+        //敌人火柴人
+        int ex = 600, ey = 250;
+        int ehp = 3;
+
+        boolean left,right,space;
+
+        public GamePanel(){
+            setBackground(Color.WHITE);
+            gameThread = new Thread(this);
+            gameThread.start();
+        }
+
+        public void keyDown(int code){
+            if(code == KeyEvent.VK_A) left=true;
+            if(code == KeyEvent.VK_D) right=true;
+            if(code == KeyEvent.VK_SPACE) {
+                if(!jump) {
+                    vy=-18;
+                    jump=true;
+                }
+                attack=true;
+            }
+        }
+        public void keyUp(int code){
+            if(code == KeyEvent.VK_A) left=false;
+            if(code == KeyEvent.VK_D) right=false;
+            if(code == KeyEvent.VK_SPACE) attack=false;
+        }
+
+        @Override
+        public void run() {
+            running = true;
+            while(running){
+                update();
+                repaint();
+                try {
+                    Thread.sleep(1000/60);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        void update(){
+            //移动
+            if(left) vx = -5;
+            else if(right) vx = 5;
+            else vx=0;
+
+            //重力
+            vy += GRAVITY;
+            px += vx;
+            py += vy;
+
+            //地面
+            if(py >=250){
+                py=250;
+                vy=0;
+                jump=false;
+            }
+
+            //攻击判定
+            if(attack){
+                if(Math.abs(px-ex)<80){
+                    ehp--;
+                    attack=false;
+                }
+            }
+
+            //敌人简单移动
+            if(ex > px+120) ex -=2;
+            if(ex < px-120) ex +=2;
+
+            //游戏胜利
+            if(ehp <=0){
+                JOptionPane.showMessageDialog(this,"火柴人逆袭成功！");
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D)g;
+            g2.setStroke(new BasicStroke(3));
+            //画玩家火柴人
+            drawStick(g2,px,py,Color.BLACK);
+            //画敌人火柴人
+            drawStick(g2,ex,ey,Color.RED);
+            //血条
+            g.setColor(Color.GRAY);
+            g.fillRect(ex, ey-40, 60,8);
+            g.setColor(Color.RED);
+            g.fillRect(ex, ey-40, ehp*20,8);
+            g.drawString("A左 D右 空格跳跃+攻击",20,30);
+        }
+
+        //画火柴人函数
+        void drawStick(Graphics2D g, int x, int y, Color c){
+            g.setColor(c);
+            //头 圆
+            g.drawOval(x-10,y-30,20,20);
+            //身体
+            g.drawLine(x,y-10,x,y+20);
+            //手臂
+            g.drawLine(x,y,x-15,y+10);
+            g.drawLine(x,y,x+15,y+10);
+            //腿
+            g.drawLine(x,y+20,x-10,y+40);
+            g.drawLine(x,y+20,x+10,y+40);
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(()->{
+            new StickFightGame().setVisible(true);
+        });
+    }
+}
+
